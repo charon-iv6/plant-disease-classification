@@ -64,4 +64,5 @@ ehthumbs.db
 Thumbs.db
 
 # Documentation
+docs/_build/
 docs/build/

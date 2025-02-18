@@ -229,3 +229,105 @@ Special thanks to:
   <br>
   <i>Empowering Agriculture with AI</i>
 </p>
+
+## Installation Guide
+
+### Prerequisites
+- Python 3.8 or higher
+- pip (Python package installer)
+- Git
+
+### Platform-Specific Setup
+
+#### Windows
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/plant-disease-classification.git
+cd plant-disease-classification
+
+# 2. Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. For CUDA support (optional)
+# Uncomment the Windows-specific lines in requirements.txt
+```
+
+#### macOS (Intel/M1/M2)
+```bash
+# 1. Clone the repository
+git clone https://github.com/yourusername/plant-disease-classification.git
+cd plant-disease-classification
+
+# 2. Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. For M1/M2 Macs
+# Uncomment the macOS-specific lines in requirements.txt
+```
+
+### Verify Installation
+```bash
+python src/final_model.py --verify-setup
+```
+
+## Documentation
+
+### Building Documentation
+This project uses GitHub Pages for documentation hosting. To build and view the documentation locally:
+
+1. Install documentation dependencies:
+```bash
+pip install -r docs/requirements.txt
+```
+
+2. Build documentation:
+```bash
+cd docs
+make html
+```
+
+3. View documentation:
+- Windows: `start _build/html/index.html`
+- macOS: `open _build/html/index.html`
+
+### Documentation Structure
+```
+docs/
+├── source/
+│   ├── conf.py           # Sphinx configuration
+│   ├── index.rst         # Documentation home page
+│   ├── api/              # API documentation
+│   ├── guides/           # User guides
+│   └── examples/         # Example notebooks
+└── _build/              # Built documentation
+```
+
+### GitHub Pages Setup
+The documentation is automatically deployed to GitHub Pages on each push to the main branch. View it at: `https://yourusername.github.io/plant-disease-classification`
+
+## Performance Optimization
+
+### Hardware Acceleration
+
+#### CUDA (Windows)
+- Automatically uses CUDA if available
+- Supports CUDA 11.8 and newer
+- Multi-GPU training supported
+
+#### Metal (macOS)
+- Automatically uses Metal on M1/M2 Macs
+- CPU fallback for Intel Macs
+- Optimized for Apple Silicon
+
+### Memory Optimization
+- Gradient checkpointing for large models
+- Mixed precision training
+- Efficient data loading
