@@ -1,0 +1,330 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Model Architecture &mdash; Plant Disease Classification 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=af2ce170"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=f281be69"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Installation Guide" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #2980B9" >
+
+          
+          
+          <a href="index.html">
+            
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Plant Disease Classification Challenge</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Model Architecture</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#resnet9-architecture">ResNet9 Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#training-optimizations">Training Optimizations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#mixed-precision-training">Mixed Precision Training</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#learning-rate-schedule">Learning Rate Schedule</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-augmentation">Data Augmentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-analysis">Performance Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#resource-utilization">Resource Utilization</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-challenges">Implementation Challenges</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#class-imbalance">Class Imbalance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#time-constraint">Time Constraint</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#persian-text-support">Persian Text Support</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#hardware-acceleration">Hardware Acceleration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cuda-support-windows">CUDA Support (Windows)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#metal-support-macos">Metal Support (macOS)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#batch-processing">Batch Processing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#training-pipeline">Training Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inference-pipeline">Inference Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-metrics">Performance Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-distribution">Class Distribution</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #2980B9" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Plant Disease Classification</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Model Architecture</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/model.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="model-architecture">
+<h1>Model Architecture<a class="headerlink" href="#model-architecture" title="Permalink to this heading"></a></h1>
+<section id="resnet9-architecture">
+<h2>ResNet9 Architecture<a class="headerlink" href="#resnet9-architecture" title="Permalink to this heading"></a></h2>
+<p>The project uses a modified ResNet9 architecture optimized for plant disease classification:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Input (3, 224, 224)
+    ↓
+Conv1 + BN + ReLU (64 channels)
+    ↓
+MaxPool
+    ↓
+ResBlock1 (128 channels)
+    ↓
+ResBlock2 (256 channels)
+    ↓
+AdaptiveAvgPool
+    ↓
+Classifier (16 classes)
+</pre></div>
+</div>
+</section>
+<section id="training-optimizations">
+<h2>Training Optimizations<a class="headerlink" href="#training-optimizations" title="Permalink to this heading"></a></h2>
+<section id="mixed-precision-training">
+<h3>Mixed Precision Training<a class="headerlink" href="#mixed-precision-training" title="Permalink to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">scaler</span> <span class="o">=</span> <span class="n">GradScaler</span><span class="p">()</span>
+<span class="k">with</span> <span class="n">autocast</span><span class="p">():</span>
+    <span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">criterion</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="learning-rate-schedule">
+<h3>Learning Rate Schedule<a class="headerlink" href="#learning-rate-schedule" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>One Cycle Policy</p></li>
+<li><p>Max LR: 1e-3</p></li>
+<li><p>Min LR: 1e-5</p></li>
+</ul>
+</section>
+<section id="data-augmentation">
+<h3>Data Augmentation<a class="headerlink" href="#data-augmentation" title="Permalink to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">train_transform</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+    <span class="n">A</span><span class="o">.</span><span class="n">RandomResizedCrop</span><span class="p">(</span><span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">),</span>
+    <span class="n">A</span><span class="o">.</span><span class="n">HorizontalFlip</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
+    <span class="n">A</span><span class="o">.</span><span class="n">VerticalFlip</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
+    <span class="n">A</span><span class="o">.</span><span class="n">RandomRotate90</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span>
+    <span class="n">A</span><span class="o">.</span><span class="n">OneOf</span><span class="p">([</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">RandomBrightnessContrast</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">RandomGamma</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">HueSaturationValue</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="p">],</span> <span class="n">p</span><span class="o">=</span><span class="mf">0.3</span><span class="p">),</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="performance-analysis">
+<h2>Performance Analysis<a class="headerlink" href="#performance-analysis" title="Permalink to this heading"></a></h2>
+<section id="resource-utilization">
+<h3>Resource Utilization<a class="headerlink" href="#resource-utilization" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><dl class="simple">
+<dt>Memory Usage:</dt><dd><ul>
+<li><p>Training Peak: 4.2GB</p></li>
+<li><p>Inference Peak: 2.1GB</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>GPU Utilization:</dt><dd><ul>
+<li><p>Training: 85-95%</p></li>
+<li><p>Inference: 60-70%</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>CPU Usage:</dt><dd><ul>
+<li><p>Data Loading: 4 workers</p></li>
+<li><p>Preprocessing: ~30% utilization</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+</section>
+<section id="implementation-challenges">
+<h2>Implementation Challenges<a class="headerlink" href="#implementation-challenges" title="Permalink to this heading"></a></h2>
+<section id="class-imbalance">
+<h3>Class Imbalance<a class="headerlink" href="#class-imbalance" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Challenge: Extreme imbalance (56 vs 1523 images)</p></li>
+<li><dl class="simple">
+<dt>Solutions:</dt><dd><ul>
+<li><p>Weighted sampling</p></li>
+<li><p>Focal Loss</p></li>
+<li><p>Heavy augmentation for minority classes</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+<section id="time-constraint">
+<h3>Time Constraint<a class="headerlink" href="#time-constraint" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Challenge: 30-minute limit for 500 images</p></li>
+<li><dl class="simple">
+<dt>Solutions:</dt><dd><ul>
+<li><p>Batch processing</p></li>
+<li><p>Confidence-based TTA</p></li>
+<li><p>Hardware acceleration optimization</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+<section id="persian-text-support">
+<h3>Persian Text Support<a class="headerlink" href="#persian-text-support" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>Challenge: Bilingual dataset labeling</p></li>
+<li><dl class="simple">
+<dt>Solutions:</dt><dd><ul>
+<li><p>UTF-8 encoding</p></li>
+<li><p>Bidirectional text support</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</section>
+</section>
+<section id="hardware-acceleration">
+<h2>Hardware Acceleration<a class="headerlink" href="#hardware-acceleration" title="Permalink to this heading"></a></h2>
+<section id="cuda-support-windows">
+<h3>CUDA Support (Windows)<a class="headerlink" href="#cuda-support-windows" title="Permalink to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="metal-support-macos">
+<h3>Metal Support (macOS)<a class="headerlink" href="#metal-support-macos" title="Permalink to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;mps&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">mps</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="batch-processing">
+<h3>Batch Processing<a class="headerlink" href="#batch-processing" title="Permalink to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">predict_batch</span><span class="p">(</span><span class="n">images</span><span class="p">,</span> <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">):</span>
+    <span class="n">all_preds</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">images</span><span class="p">),</span> <span class="n">batch_size</span><span class="p">):</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="n">images</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="n">batch_size</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">preds</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+        <span class="n">all_preds</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">preds</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">all_preds</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="training-pipeline">
+<h2>Training Pipeline<a class="headerlink" href="#training-pipeline" title="Permalink to this heading"></a></h2>
+</section>
+<section id="inference-pipeline">
+<h2>Inference Pipeline<a class="headerlink" href="#inference-pipeline" title="Permalink to this heading"></a></h2>
+</section>
+<section id="performance-metrics">
+<h2>Performance Metrics<a class="headerlink" href="#performance-metrics" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Training time: ~2-3 hours on M1 Mac</p></li>
+<li><p>Inference time: ~0.1s per image</p></li>
+<li><p>Best validation F1: ~0.91</p></li>
+<li><p>Memory usage: ~4GB</p></li>
+</ul>
+</section>
+<section id="class-distribution">
+<h2>Class Distribution<a class="headerlink" href="#class-distribution" title="Permalink to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>0: سالم (Healthy) - 93 images
+1: کرم سفید ریشه (White Root Worm) - 684 images
+...
+15: سایر (Others) - 721 images
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="Installation Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Danial Jabbari.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
