@@ -24,19 +24,55 @@ class TrainingPipeline:
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.config = config
-        self.device = self._setup_device()
+        
+        # Initialize logger first
         self.logger = self._setup_logging()
         
-        # Initialize model
+        # Then setup device
+        self.device = self._setup_device()
+        
+        # Initialize model with memory-efficient settings
         self.model = ResNet9(
             num_classes=16,
             dropout=self.config.get('dropout', 0.1)
         ).to(self.device)
         
-        # Initialize EMA model
-        self.ema_model = ModelEMA(self.model)
+        if self.config.get('memory_efficient', False):
+            # Use memory-efficient settings for Mac
+            torch.backends.cudnn.benchmark = False
+            if hasattr(torch.backends, 'mps'):
+                # MPS-specific memory optimizations
+                if hasattr(torch.mps, 'set_cache_limit'):
+                    # Limit MPS cache to 80% of available memory
+                    total_memory = psutil.virtual_memory().total
+                    torch.mps.set_cache_limit(int(total_memory * 0.8))
+                
+                self.logger.info("Enabled memory-efficient settings for MPS")
         
+        # Initialize EMA model only if not in memory-efficient mode
+        if not self.config.get('memory_efficient', False):
+            self.ema_model = ModelEMA(self.model)
+        else:
+            self.ema_model = None
+        
+        # Initialize optimizer with memory-efficient settings
+        self.optimizer = torch.optim.AdamW(
+            self.model.parameters(),
+            lr=self.config['learning_rate'],
+            weight_decay=self.config['weight_decay']
+        )
+        
+        # Initialize other attributes
         self.memory_stats = []
+        self.current_epoch = 0
+        self.best_val_f1 = 0
+        self.scheduler = None
+        
+        # Initialize gradient scaler for mixed precision
+        self.scaler = GradScaler(enabled=self.config.get('mixed_precision', True))
+        
+        # Set gradient accumulation steps
+        self.grad_accum_steps = self.config.get('gradient_accumulation_steps', 1)
         
     def _setup_device(self):
         """Setup compute device with proper error handling"""
@@ -91,57 +127,59 @@ class TrainingPipeline:
         sample_weights = [1/class_counts[label] for label in labels]
         sampler = WeightedRandomSampler(sample_weights, len(sample_weights))
         
-        # Memory-efficient data loading
+        # Memory-efficient data loading settings
+        dataloader_kwargs = {
+            'batch_size': self.config['batch_size'],
+            'num_workers': self.config['num_workers'],
+            'pin_memory': self.config.get('pin_memory', False),
+            'persistent_workers': False if self.config.get('memory_efficient', False) else True,
+            'prefetch_factor': 2 if not self.config.get('memory_efficient', False) else None
+        }
+        
         train_loader = DataLoader(
             self.train_dataset,
-            batch_size=self.config['batch_size'],
             sampler=sampler,
-            num_workers=self.config['num_workers'],
-            pin_memory=True,
-            prefetch_factor=2,  # Reduce prefetch to save memory
-            persistent_workers=True,  # Keep workers alive between epochs
-            drop_last=True  # Avoid small last batch
+            **dataloader_kwargs,
+            drop_last=True
         )
         
         val_loader = DataLoader(
             self.val_dataset,
-            batch_size=self.config['batch_size'],
             shuffle=False,
-            num_workers=self.config['num_workers'],
-            pin_memory=True,
-            prefetch_factor=2,
-            persistent_workers=True
+            **dataloader_kwargs
         )
         
         return train_loader, val_loader
     
-    def monitor_memory(self) -> Dict[str, float]:
-        """Monitor and log memory usage"""
+    def monitor_memory(self):
+        """Monitor memory usage with less aggressive checks"""
         stats = {}
         
         # CPU Memory
         process = psutil.Process()
-        stats['cpu_memory_gb'] = process.memory_info().rss / 1024 ** 3
+        stats['cpu_memory_gb'] = process.memory_info().rss / (1024 * 1024 * 1024)
         
-        # GPU Memory
-        if torch.cuda.is_available():
-            stats['gpu_allocated_gb'] = torch.cuda.memory_allocated(0) / 1024 ** 3
-            stats['gpu_cached_gb'] = torch.cuda.memory_cached(0) / 1024 ** 3
-            stats['gpu_max_gb'] = torch.cuda.max_memory_allocated(0) / 1024 ** 3
+        # GPU Memory (if available)
+        if self.device.type == 'cuda':
+            stats['gpu_allocated_gb'] = torch.cuda.memory_allocated() / (1024 * 1024 * 1024)
+            stats['gpu_cached_gb'] = torch.cuda.memory_reserved() / (1024 * 1024 * 1024)
+        elif self.device.type == 'mps':
+            # MPS (Apple Silicon) doesn't provide memory stats
+            stats['gpu_allocated_gb'] = 0
+            stats['gpu_cached_gb'] = 0
         
-        self.memory_stats.append(stats)
-        self.logger.info(f"Memory Usage - CPU: {stats['cpu_memory_gb']:.2f}GB, " + 
-                        (f"GPU: {stats['gpu_allocated_gb']:.2f}GB allocated" 
-                         if torch.cuda.is_available() else "GPU: N/A"))
+        # Only store if significant change
+        if not self.memory_stats or \
+           abs(stats['cpu_memory_gb'] - self.memory_stats[-1]['cpu_memory_gb']) > 0.1:
+            self.memory_stats.append(stats)
         
         return stats
     
     def clear_gpu_memory(self):
-        """Clear GPU memory cache"""
-        if torch.cuda.is_available():
+        """Clear GPU memory only when necessary"""
+        if self.device.type == 'cuda':
             torch.cuda.empty_cache()
-            gc.collect()
-            self.logger.info("Cleared GPU memory cache")
+        gc.collect()
     
     def _optimize_memory(self):
         """Optimize memory usage"""
@@ -156,6 +194,11 @@ class TrainingPipeline:
             
             # Enable memory-efficient methods
             torch.backends.cudnn.benchmark = True
+        elif torch.backends.mps.is_available():
+            # M1/M2 specific optimizations
+            torch.mps.empty_cache()
+            # Set garbage collection threshold for better memory management
+            gc.set_threshold(100, 5, 5)
             
         # Clear unused memory
         gc.collect()
@@ -236,28 +279,55 @@ class TrainingPipeline:
             self.clear_gpu_memory()
     
     def _train_epoch(self, train_loader, criterion, optimizer, scheduler, scaler):
-        """Single epoch training with memory monitoring"""
+        """Single epoch training with memory-efficient processing"""
         self.model.train()
-        stats = {'train_loss': 0, 'samples_processed': 0}
+        stats = {
+            'train_loss': 0,
+            'samples_processed': 0,
+            'train_predictions': [],
+            'train_targets': []
+        }
+        
+        optimizer.zero_grad(set_to_none=True)  # More memory efficient than zero_grad()
         
         for batch_idx, (data, target) in enumerate(train_loader):
             try:
-                # Process batch
-                data, target = data.to(self.device), target.to(self.device)
+                # Process batch with gradient accumulation
+                is_accumulation_step = (batch_idx + 1) % self.grad_accum_steps != 0
                 
-                optimizer.zero_grad()
-                
-                with autocast():
+                with autocast(enabled=self.config.get('mixed_precision', True)):
+                    data, target = data.to(self.device), target.to(self.device)
                     output = self.model(data)
-                    loss = criterion(output, target)
+                    loss = criterion(output, target) / self.grad_accum_steps
                 
+                # Scale loss and backward pass
                 scaler.scale(loss).backward()
-                scaler.step(optimizer)
-                scaler.update()
-                scheduler.step()
                 
-                stats['train_loss'] += loss.item()
+                if not is_accumulation_step:
+                    # Update weights and zero gradients
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad(set_to_none=True)
+                    
+                    if scheduler is not None:
+                        scheduler.step()
+                
+                # Update statistics
+                stats['train_loss'] += loss.item() * self.grad_accum_steps
                 stats['samples_processed'] += len(data)
+                
+                # Collect predictions and targets
+                with torch.no_grad():
+                    stats['train_predictions'].extend(output.argmax(dim=1).cpu().numpy())
+                    stats['train_targets'].extend(target.cpu().numpy())
+                
+                # Clear memory for Mac
+                if self.config.get('memory_efficient', False):
+                    del data, target, output, loss
+                    if hasattr(torch.cuda, 'empty_cache'):
+                        torch.cuda.empty_cache()
+                    elif hasattr(torch.mps, 'empty_cache'):
+                        torch.mps.empty_cache()
                 
                 # Monitor memory periodically
                 if batch_idx % 10 == 0:
@@ -267,13 +337,14 @@ class TrainingPipeline:
                 if "out of memory" in str(e):
                     self.logger.error(f"OOM in batch {batch_idx}. Clearing memory and skipping batch.")
                     self.clear_gpu_memory()
+                    optimizer.zero_grad(set_to_none=True)
                     continue
                 raise
         
         return stats
     
     def _validate(self, val_loader, criterion):
-        """Validation step with proper error handling"""
+        """Memory-efficient validation step"""
         self.model.eval()
         val_loss = 0
         val_predictions = []
@@ -283,12 +354,21 @@ class TrainingPipeline:
             for data, target in val_loader:
                 data, target = data.to(self.device), target.to(self.device)
                 
-                output = self.model(data)
-                loss = criterion(output, target)
+                with autocast(enabled=self.config.get('mixed_precision', True)):
+                    output = self.model(data)
+                    loss = criterion(output, target)
                 
                 val_loss += loss.item()
                 val_predictions.extend(output.argmax(dim=1).cpu().numpy())
                 val_targets.extend(target.cpu().numpy())
+                
+                # Clear memory for Mac
+                if self.config.get('memory_efficient', False):
+                    del data, target, output, loss
+                    if hasattr(torch.cuda, 'empty_cache'):
+                        torch.cuda.empty_cache()
+                    elif hasattr(torch.mps, 'empty_cache'):
+                        torch.mps.empty_cache()
         
         return val_loss, val_predictions, val_targets
     
@@ -308,12 +388,45 @@ class TrainingPipeline:
                 mlflow.log_metric(key, value)
     
     def _save_model(self, filename):
-        """Save model with proper error handling"""
+        """Memory-efficient model saving"""
         try:
-            torch.save(self.model.state_dict(), filename)
-            self.logger.info(f"Model saved to {filename}")
+            save_path = Path(self.config['save_dir']) / filename
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Save model state with reduced memory footprint
+            save_dict = {
+                'model_state_dict': self.model.state_dict(),
+                'epoch': self.current_epoch,
+                'best_val_f1': self.best_val_f1,
+            }
+            
+            # Only save EMA if enabled
+            if self.ema_model is not None:
+                save_dict['ema_state_dict'] = self.ema_model.shadow
+            
+            # Save optimizer and scheduler if not in memory-efficient mode
+            if not self.config.get('memory_efficient', False):
+                save_dict.update({
+                    'optimizer_state_dict': self.optimizer.state_dict(),
+                    'scheduler_state_dict': self.scheduler.state_dict() if self.scheduler else None
+                })
+            
+            torch.save(save_dict, save_path)
+            self.logger.info(f"Model saved to {save_path}")
+            
+            # Log to MLflow
+            mlflow.log_artifact(str(save_path))
+            
         except Exception as e:
             self.logger.error(f"Error saving model: {str(e)}")
+            try:
+                # Create emergency backup with minimal state
+                emergency_path = Path('models') / f'emergency_{filename}'
+                torch.save(self.model.state_dict(), emergency_path)
+                self.logger.info(f"Emergency model backup saved to {emergency_path}")
+            except Exception as backup_error:
+                self.logger.error(f"Emergency backup also failed: {str(backup_error)}")
+                raise
     
     def _plot_confusion_matrix(self, targets, predictions, epoch):
         """Generate and save confusion matrix plot"""

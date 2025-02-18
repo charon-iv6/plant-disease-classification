@@ -1,0 +1,50 @@
+{
+    "data_path": "data",
+    "output_dir": "output",
+    "log_dir": "logs",
+    "model_dir": "models",
+    "visualization_dir": "visualizations",
+    "submission_dir": "submissions",
+    "epochs": 50,
+    "batch_size": 16,
+    "learning_rate": 0.001,
+    "weight_decay": 0.01,
+    "num_workers": 2,
+    "pin_memory": false,
+    "gradient_accumulation_steps": 4,
+    "memory_efficient": true,
+    "mixed_precision": false,
+    "hardware": {
+        "use_cuda": false,
+        "use_mps": true
+    },
+    "mlflow": {
+        "tracking_uri": "mlruns",
+        "experiment_name": "plant-disease-mac"
+    },
+    "augmentation": {
+        "train": {
+            "resize": [224, 224],
+            "horizontal_flip": 0.5,
+            "vertical_flip": 0.5,
+            "rotate90": 0.5,
+            "brightness_contrast": 0.3,
+            "normalize": {
+                "mean": [0.485, 0.456, 0.406],
+                "std": [0.229, 0.224, 0.225]
+            }
+        },
+        "val": {
+            "resize": [224, 224],
+            "normalize": {
+                "mean": [0.485, 0.456, 0.406],
+                "std": [0.229, 0.224, 0.225]
+            }
+        }
+    },
+    "manager_info": {
+        "first_name": "User",
+        "last_name": "Name",
+        "phone": "1234567890"
+    }
+} 

@@ -3,7 +3,7 @@
     "augment_threshold": 100,
     "dropout": 0.3,
     "training": {
-        "batch_size": 24,
+        "batch_size": 64,
         "num_workers": 4,
         "epochs": 50,
         "learning_rate": 1e-3,
@@ -11,7 +11,10 @@
         "early_stopping_patience": 5,
         "mixed_precision": true,
         "save_dir": "models/",
-        "log_dir": "logs/"
+        "log_dir": "logs/",
+        "memory_efficient": false,
+        "gradient_accumulation_steps": 1,
+        "pin_memory": true
     },
     "model_path": "models/best_model.pth",
     "test_dir": "test_images/",
@@ -27,7 +30,7 @@
             "number": 1,
             "strategy": "base",
             "description": "Base model with standard inference",
-            "batch_size": 24,
+            "batch_size": 32,
             "tta": false
         },
         {
@@ -42,15 +45,15 @@
             "number": 3,
             "strategy": "tta",
             "description": "Best single model with Test Time Augmentation",
-            "batch_size": 12,
+            "batch_size": 16,
             "tta": true,
             "tta_transforms": ["horizontal_flip", "vertical_flip", "rotate90"]
         }
     ],
     "time_limit": 1800,
     "hardware": {
-        "use_cuda": false,
-        "use_mps": true,
+        "use_cuda": true,
+        "use_mps": false,
         "fallback_to_cpu": true
     },
     "logging": {

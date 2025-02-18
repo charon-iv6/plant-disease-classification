@@ -3,6 +3,14 @@
 ## About the Project
 A high-performance deep learning solution for classifying plant diseases into 16 classes, developed for a time-constrained classification challenge by [Danial Jabbari](https://maxion.ir), founder of Maxion AI. This implementation features a unified pipeline optimized for both accuracy and inference speed.
 
+## Latest Updates
+- Added comprehensive error handling and validation
+- Implemented image caching for improved performance
+- Added type hints and improved documentation
+- Consolidated requirements with platform-specific markers
+- Improved model weight initialization
+- Enhanced dataset handling with validation
+
 ## About Maxion AI
 Maxion is a leading AI solutions company specializing in cutting-edge artificial intelligence applications:
 - [KeyTex](https://keytex.ir) - AI-powered financial signal provider and market analysis platform
@@ -32,6 +40,7 @@ Maxion is a leading AI solutions company specializing in cutting-edge artificial
 - Exponential Moving Average (EMA)
 - Learning rate optimization
 - Automatic checkpointing
+- Kaiming weight initialization
 
 ### 3. Inference Optimization
 - Batch processing with queues
@@ -40,14 +49,15 @@ Maxion is a leading AI solutions company specializing in cutting-edge artificial
 - Transform caching
 - Time constraint validation
 - Dynamic batch size adjustment
+- Image caching with LRU policy
 
-### 4. Challenge-Specific Features
-- Multiple submission strategies per phase
-- Time-aware processing (30-minute limit)
-- Emergency fallback mechanisms
-- Comprehensive error handling
+### 4. Robust Error Handling
+- Comprehensive input validation
+- Graceful failure recovery
+- Detailed error logging
 - Memory optimization
 - Performance monitoring
+- Automatic error reporting
 
 ### 5. Visualization Tools
 - Interactive training progress plots
@@ -61,6 +71,8 @@ Maxion is a leading AI solutions company specializing in cutting-edge artificial
 ```
 ├── src/
 │   ├── models.py              # Model architecture (ResNet9)
+│   ├── dataset.py            # Dataset handling with caching
+│   ├── prepare_data.py       # Data preparation with validation
 │   ├── training_pipeline.py   # Training implementation
 │   ├── advanced_inference.py  # Optimized inference
 │   ├── pipeline_manager.py    # Unified pipeline
@@ -69,7 +81,7 @@ Maxion is a leading AI solutions company specializing in cutting-edge artificial
 │   └── visualization_base.py  # Base visualization
 ├── docs/                      # Documentation
 ├── config.json               # Configuration
-└── requirements.txt          # Dependencies
+└── requirements.txt          # Platform-specific dependencies
 ```
 
 ## Class Distribution
@@ -99,7 +111,9 @@ Maxion is a leading AI solutions company specializing in cutting-edge artificial
 - CUDA toolkit (optional, for GPU support)
 - Metal support (optional, for Apple Silicon)
 
-### Setup
+### Platform-Specific Setup
+
+#### Windows
 ```bash
 # Clone repository
 git clone https://github.com/charon-iv6/plant-disease-classification.git
@@ -107,9 +121,21 @@ cd plant-disease-classification
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-.\venv\Scripts\activate  # Windows
+.\venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+#### macOS (Intel/M1/M2)
+```bash
+# Clone repository
+git clone https://github.com/charon-iv6/plant-disease-classification.git
+cd plant-disease-classification
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -117,33 +143,37 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Data Preparation
+```bash
+# Prepare dataset with validation
+python src/prepare_data.py --source /path/to/source --target data
+```
+
 ### Training Phase
 ```bash
+# Train with improved initialization
 python src/pipeline_manager.py --config config.json --mode train
 ```
 
-### Test Phase 1 (30% weight)
+### Test Phase
 ```bash
-python src/pipeline_manager.py --config config.json --mode test1
+# Run inference with optimizations
+python src/pipeline_manager.py --config config.json --mode test
 ```
 
-### Test Phase 2 (70% weight)
-```bash
-python src/pipeline_manager.py --config config.json --mode test2
-```
-
-## Performance
+## Performance Improvements
 
 ### Training
-- Training Time: ~2-3 hours
-- Peak GPU Memory: 4.2GB
-- Best Validation F1: 0.91
+- Improved convergence with Kaiming initialization
+- Reduced memory usage with image caching
+- Better error handling and validation
+- Type-safe implementation
 
-### Inference (Per Phase)
-- Processing Time: < 30 minutes
-- Batch Size: 32 images
-- Average Time/Image: ~0.1s
-- Memory Usage: 2.1GB
+### Inference
+- Optimized image loading with LRU cache
+- Robust error recovery
+- Platform-specific optimizations
+- Comprehensive logging
 
 ## Documentation
 Detailed documentation is available in the `docs/` directory:
@@ -151,12 +181,13 @@ Detailed documentation is available in the `docs/` directory:
 - Architecture Details
 - Performance Optimization
 - Visualization Guide
+- Error Handling Guide
+- Platform-Specific Notes
 
 ## Contact Information
 - **Developer**: Danial Jabbari
 - **Company**: Maxion AI
 - **Email**: danijabbari@protonmail.com
-- **Phone**: +98 913 111 7727
 - **Website**: [maxion.ir](https://maxion.ir)
 
 ## License
@@ -173,105 +204,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
   <br>
   <i>Empowering Agriculture with AI</i>
 </p>
-
-## Installation Guide
-
-### Prerequisites
-- Python 3.8 or higher
-- pip (Python package installer)
-- Git
-
-### Platform-Specific Setup
-
-#### Windows
-```bash
-# 1. Clone the repository
-git clone https://github.com/charon-iv6/plant-disease-classification.git
-cd plant-disease-classification
-
-# 2. Create and activate virtual environment
-python -m venv venv
-.\venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. For CUDA support (optional)
-# Uncomment the Windows-specific lines in requirements.txt
-```
-
-#### macOS (Intel/M1/M2)
-```bash
-# 1. Clone the repository
-git clone https://github.com/charon-iv6/plant-disease-classification.git
-cd plant-disease-classification
-
-# 2. Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. For M1/M2 Macs
-# Uncomment the macOS-specific lines in requirements.txt
-```
-
-### Verify Installation
-```bash
-python src/final_model.py --verify-setup
-```
-
-## Documentation
-
-### Building Documentation
-This project uses GitHub Pages for documentation hosting. To build and view the documentation locally:
-
-1. Install documentation dependencies:
-```bash
-pip install -r docs/requirements.txt
-```
-
-2. Build documentation:
-```bash
-cd docs
-make html
-```
-
-3. View documentation:
-- Windows: `start _build/html/index.html`
-- macOS: `open _build/html/index.html`
-
-### Documentation Structure
-```
-docs/
-├── source/
-│   ├── conf.py           # Sphinx configuration
-│   ├── index.rst         # Documentation home page
-│   ├── api/              # API documentation
-│   ├── guides/           # User guides
-│   └── examples/         # Example notebooks
-└── _build/              # Built documentation
-```
-
-### GitHub Pages Setup
-The documentation is automatically deployed to GitHub Pages on each push to the main branch. View it at: `https://charon-iv6.github.io/plant-disease-classification`
-
-## Performance Optimization
-
-### Hardware Acceleration
-
-#### CUDA (Windows)
-- Automatically uses CUDA if available
-- Supports CUDA 11.8 and newer
-- Multi-GPU training supported
-
-#### Metal (macOS)
-- Automatically uses Metal on M1/M2 Macs
-- CPU fallback for Intel Macs
-- Optimized for Apple Silicon
-
-### Memory Optimization
-- Gradient checkpointing for large models
-- Mixed precision training
-- Efficient data loading
