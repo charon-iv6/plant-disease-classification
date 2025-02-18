@@ -4,20 +4,20 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'docs/**'
-      - '.github/workflows/docs.yml'
   pull_request:
     branches:
       - main
-    paths:
-      - 'docs/**'
+
+permissions:
+  contents: write
 
 jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -28,15 +28,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r docs/requirements.txt
+          pip install -r requirements.txt
           
       - name: Build documentation
         run: |
           cd docs
           make html
+          cp .nojekyll _build/html/
           
       - name: Deploy to GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/_build/html 
+          publish_dir: ./docs/_build/html
+          force_orphan: true 
