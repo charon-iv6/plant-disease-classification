@@ -43,6 +43,7 @@ ENV/
 
 # Project specific
 logs/
+assets/
 *.pth
 *.pt
 *.ckpt
@@ -50,11 +51,13 @@ submissions/
 test_images/
 training_results/
 
+# MLflow
+mlruns/
+
 # Temporary files
 *.csv
 !d_jabbari_7727_*.csv
-
-# OS specific
+*.log
 .DS_Store
 .DS_Store?
 ._*
@@ -66,3 +69,34 @@ Thumbs.db
 # Documentation
 docs/_build/
 docs/build/
+
+# Data
+data/
+*.jpg
+*.jpeg
+*.png
+*.gif
+
+# Environment variables
+.env
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Model files
+models/
+*.onnx
+*.tflite
+*.h5
+
+# Profiling
+*.prof
+*.trace
+*.coverage
+htmlcov/
+
+# Packaging
+*.tar.gz
+*.zip
+*.rar

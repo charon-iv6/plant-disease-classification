@@ -6,21 +6,48 @@ ResNet9 Architecture
 
 The project uses a modified ResNet9 architecture optimized for plant disease classification:
 
+Architecture Overview
+^^^^^^^^^^^^^^^^^^
+
 .. code-block:: text
 
    Input (3, 224, 224)
        ↓
-   Conv1 + BN + ReLU (64 channels)
+   Conv1 + BN + ReLU (64)
        ↓
    MaxPool
        ↓
-   ResBlock1 (128 channels)
+   ResBlock1 (128)
        ↓
-   ResBlock2 (256 channels)
+   ResBlock2 (256)
+       ↓
+   ResBlock3 (512)
        ↓
    AdaptiveAvgPool
        ↓
-   Classifier (16 classes)
+   Classifier (16)
+
+Key Components
+^^^^^^^^^^^^
+
+1. **Initial Layer**:
+   - Convolutional layer (64 channels)
+   - Batch normalization
+   - ReLU activation
+
+2. **Residual Blocks**:
+   - Three residual blocks
+   - Channel expansion (64 → 128 → 256 → 512)
+   - Skip connections for better gradient flow
+
+3. **Pooling Layers**:
+   - MaxPool2d for spatial reduction
+   - AdaptiveAvgPool2d for fixed output size
+
+4. **Classifier**:
+   - Dropout for regularization
+   - Two fully connected layers
+   - Final softmax for 16 classes
 
 Training Optimizations
 -------------------
@@ -38,9 +65,10 @@ Mixed Precision Training
 Learning Rate Schedule
 ^^^^^^^^^^^^^^^^^^
 
-* One Cycle Policy
-* Max LR: 1e-3
-* Min LR: 1e-5
+- One Cycle Policy
+- Max LR: 1e-3
+- Min LR: 1e-5
+- Cosine annealing
 
 Data Augmentation
 ^^^^^^^^^^^^^^^
@@ -59,26 +87,97 @@ Data Augmentation
        ], p=0.3),
    ])
 
-Performance Analysis
------------------
+Model Components
+-------------
 
-Resource Utilization
+Exponential Moving Average
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``ModelEMA`` class maintains an exponential moving average of model parameters:
+
+.. code-block:: python
+
+   ema_model = ModelEMA(model, decay=0.999)
+   ema_model.update(model)
+
+Test Time Augmentation
+^^^^^^^^^^^^^^^^^^^
+
+Multiple augmentation strategies during inference:
+
+.. code-block:: python
+
+   def predict_with_tta(model, image):
+       transforms = [
+           A.HorizontalFlip(p=1.0),
+           A.VerticalFlip(p=1.0),
+           A.RandomRotate90(p=1.0)
+       ]
+       predictions = []
+       # Original prediction
+       predictions.append(model(image))
+       # Augmented predictions
+       for transform in transforms:
+           aug_image = transform(image=image)
+           predictions.append(model(aug_image))
+       return torch.stack(predictions).mean(0)
+
+Hardware Acceleration
+------------------
+
+CUDA Support (Windows)
+^^^^^^^^^^^^^^^^^^
+
+.. code-block:: python
+
+   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+   model = model.to(device)
+
+Metal Support (macOS)
 ^^^^^^^^^^^^^^^^^
 
-* Memory Usage:
-    * Training Peak: 4.2GB
-    * Inference Peak: 2.1GB
+.. code-block:: python
 
-* GPU Utilization:
-    * Training: 85-95%
-    * Inference: 60-70%
+   device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
+   model = model.to(device)
 
-* CPU Usage:
-    * Data Loading: 4 workers
-    * Preprocessing: ~30% utilization
+Performance Metrics
+----------------
 
-Implementation Challenges
-----------------------
+Training Performance
+^^^^^^^^^^^^^^^^^
+- Training time: ~2-3 hours
+- Peak GPU memory: ~4GB
+- Best validation F1: ~0.91
+
+Inference Performance
+^^^^^^^^^^^^^^^^^
+- Batch size: 32 images
+- Average inference time: ~0.1s per image
+- Memory usage: ~2.1GB
+
+Implementation Details
+-------------------
+
+1. **Initialization**:
+   - Xavier initialization for convolutional layers
+   - Kaiming initialization for linear layers
+   - Bias initialization to zero
+
+2. **Regularization**:
+   - Dropout (p=0.1)
+   - Weight decay (1e-4)
+   - Label smoothing (0.1)
+
+3. **Optimization**:
+   - AdamW optimizer
+   - Gradient clipping
+   - Learning rate warmup
+
+4. **Loss Function**:
+   - Cross-entropy with class weights
+   - Label smoothing
+   - Focal loss for imbalanced classes
 
 Class Imbalance
 ^^^^^^^^^^^^^
@@ -106,25 +205,6 @@ Persian Text Support
     * UTF-8 encoding
     * Bidirectional text support
 
-Hardware Acceleration
-------------------
-
-CUDA Support (Windows)
-^^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-   model = model.to(device)
-
-Metal Support (macOS)
-^^^^^^^^^^^^^^^^^
-
-.. code-block:: python
-
-   device = torch.device('mps' if torch.backends.mps.is_available() else 'cpu')
-   model = model.to(device)
-
 Batch Processing
 ^^^^^^^^^^^^^
 
@@ -146,13 +226,6 @@ Training Pipeline
 Inference Pipeline
 ----------------
 .. autofunction:: src.final_model.create_challenge_submission
-
-Performance Metrics
------------------
-* Training time: ~2-3 hours on M1 Mac
-* Inference time: ~0.1s per image
-* Best validation F1: ~0.91
-* Memory usage: ~4GB
 
 Class Distribution
 ----------------

@@ -1,1 +1,70 @@
- 
+{
+    "data_path": "data/",
+    "augment_threshold": 100,
+    "dropout": 0.3,
+    "training": {
+        "batch_size": 32,
+        "num_workers": 4,
+        "epochs": 50,
+        "learning_rate": 1e-3,
+        "weight_decay": 1e-4,
+        "early_stopping_patience": 5,
+        "mixed_precision": true,
+        "save_dir": "models/",
+        "log_dir": "logs/"
+    },
+    "model_path": "models/best_model.pth",
+    "test_dir": "test_images/",
+    "output_dir": "submissions/",
+    "manager_info": {
+        "first_name": "Danial",
+        "last_name": "Jabbari",
+        "phone": "09131117727",
+        "email": "danijabbari@protonmail.com"
+    },
+    "submissions": [
+        {
+            "number": 1,
+            "strategy": "base",
+            "description": "Base model with standard inference",
+            "batch_size": 32,
+            "tta": false
+        },
+        {
+            "number": 2,
+            "strategy": "ensemble",
+            "description": "Ensemble of top 3 checkpoints",
+            "batch_size": 24,
+            "tta": true,
+            "ensemble_weights": [0.4, 0.3, 0.3]
+        },
+        {
+            "number": 3,
+            "strategy": "tta",
+            "description": "Best single model with Test Time Augmentation",
+            "batch_size": 16,
+            "tta": true,
+            "tta_transforms": ["horizontal_flip", "vertical_flip", "rotate90"]
+        }
+    ],
+    "time_limit": 1800,
+    "hardware": {
+        "use_cuda": true,
+        "use_mps": true,
+        "fallback_to_cpu": true
+    },
+    "logging": {
+        "level": "INFO",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "file": "plant_classification.log"
+    },
+    "mlflow": {
+        "experiment_name": "plant_disease_classification",
+        "tracking_uri": "mlruns"
+    },
+    "visualization": {
+        "plot_training_progress": true,
+        "save_confusion_matrix": true,
+        "save_class_distribution": true
+    }
+} 
