@@ -1,7 +1,7 @@
 # Plant Disease Classification Challenge 🌿
 
 ## Project Overview
-A deep learning solution for classifying plant diseases into 16 classes, developed for a time-constrained classification challenge by [Danial Jabbari](https://maxion.ir).
+A deep learning solution for classifying plant diseases into 16 classes, developed for a time-constrained classification challenge by [Danial Jabbari](https://maxion.ir), founder of Maxion AI.
 
 ### Challenge Requirements
 - **Task**: Classify plant disease images into 16 classes
@@ -172,19 +172,17 @@ def predict_batch(images, batch_size=32):
 ## About the Author
 
 ### Danial Jabbari
-- Founder & CEO of [Maxion](https://maxion.ir)
-- AI/ML Specialist with focus on Computer Vision
-- Experience in agricultural technology and automation
+- Founder & CEO of [Maxion](https://maxion.ir) - A Leading AI Solutions Company
+- Pioneer in Applied AI across Multiple Industries
+- Track Record of Successful AI Product Deployments
 
-![Maxion Logo](assets/maxion_logo.png)
-
-### Recent Projects
-- Plant Disease Detection Systems
-- Agricultural Automation Solutions
-- Computer Vision Applications
+### Notable AI Solutions by Maxion
+- [KeyTex](https://keytex.ir) - AI-Powered Financial Signal Provider & Market Analysis
+- [Legal AI](https://chat.keytex.ir) - Advanced Legal Assistant and Documentation Platform
+- Custom Enterprise AI Solutions
 
 ## Contact Information
-- 🌐 Website: [maxion.ir](https://maxion.ir)
+- 🌐 Company Website: [maxion.ir](https://maxion.ir)
 - 📧 Email: danial.jabbari@maxion.ir
 - 💼 LinkedIn: [Danial Jabbari](https://linkedin.com/in/danial-jabbari)
 - 🐦 Twitter: [@danial_jabbari](https://twitter.com/danial_jabbari)
