@@ -100,3 +100,24 @@ htmlcov/
 *.tar.gz
 *.zip
 *.rar
+
+# Data and Models
+data/
+models/
+*.pth
+*.pt
+*.ckpt
+test_images/
+
+# Logs and Results
+logs/
+mlruns/
+*.log
+output/
+submissions/
+visualizations/
+
+# Project specific
+model_transfer/
+model_transfer.zip
+dataset_stats.json

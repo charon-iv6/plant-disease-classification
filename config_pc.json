@@ -1,20 +1,77 @@
 {
+    "source_dir": "/Users/dani/Documents/AI/vision_plants",
     "data_path": "data/",
     "augment_threshold": 100,
     "dropout": 0.3,
+    "image_size": {
+        "height": 224,
+        "width": 224
+    },
+    "data_preparation": {
+        "train_ratio": 0.8,
+        "validate_images": true,
+        "num_workers": 8,
+        "cache_size": 2000
+    },
     "training": {
         "batch_size": 64,
-        "num_workers": 4,
+        "num_workers": 8,
         "epochs": 50,
-        "learning_rate": 1e-3,
+        "learning_rate": 3e-4,
         "weight_decay": 1e-4,
         "early_stopping_patience": 5,
         "mixed_precision": true,
         "save_dir": "models/",
         "log_dir": "logs/",
-        "memory_efficient": false,
-        "gradient_accumulation_steps": 1,
-        "pin_memory": true
+        "memory_efficient": false
+    },
+    "augmentation": {
+        "train": {
+            "Resize": {
+                "height": 224,
+                "width": 224
+            },
+            "HorizontalFlip": {
+                "p": 0.5
+            },
+            "VerticalFlip": {
+                "p": 0.5
+            },
+            "RandomRotate90": {
+                "p": 0.5
+            },
+            "RandomBrightnessContrast": {
+                "brightness_limit": 0.2,
+                "contrast_limit": 0.2,
+                "p": 0.5
+            },
+            "RandomGamma": {
+                "gamma_limit": [80, 120],
+                "p": 0.5
+            },
+            "HueSaturationValue": {
+                "hue_shift_limit": 20,
+                "sat_shift_limit": 30,
+                "val_shift_limit": 20,
+                "p": 0.5
+            },
+            "Normalize": {
+                "mean": [0.485, 0.456, 0.406],
+                "std": [0.229, 0.224, 0.225],
+                "max_pixel_value": 255.0
+            }
+        },
+        "test": {
+            "Resize": {
+                "height": 224,
+                "width": 224
+            },
+            "Normalize": {
+                "mean": [0.485, 0.456, 0.406],
+                "std": [0.229, 0.224, 0.225],
+                "max_pixel_value": 255.0
+            }
+        }
     },
     "model_path": "models/best_model.pth",
     "test_dir": "test_images/",
@@ -22,7 +79,6 @@
     "manager_info": {
         "first_name": "Danial",
         "last_name": "Jabbari",
-        "phone": "09131117727",
         "email": "danijabbari@protonmail.com"
     },
     "submissions": [
@@ -30,14 +86,14 @@
             "number": 1,
             "strategy": "base",
             "description": "Base model with standard inference",
-            "batch_size": 32,
+            "batch_size": 64,
             "tta": false
         },
         {
             "number": 2,
             "strategy": "ensemble",
             "description": "Ensemble of top 3 checkpoints",
-            "batch_size": 16,
+            "batch_size": 32,
             "tta": true,
             "ensemble_weights": [0.4, 0.3, 0.3]
         },
@@ -45,16 +101,17 @@
             "number": 3,
             "strategy": "tta",
             "description": "Best single model with Test Time Augmentation",
-            "batch_size": 16,
+            "batch_size": 32,
             "tta": true,
-            "tta_transforms": ["horizontal_flip", "vertical_flip", "rotate90"]
+            "tta_transforms": ["HorizontalFlip", "VerticalFlip", "RandomRotate90"]
         }
     ],
     "time_limit": 1800,
     "hardware": {
         "use_cuda": true,
         "use_mps": false,
-        "fallback_to_cpu": true
+        "fallback_to_cpu": true,
+        "memory_efficient": false
     },
     "logging": {
         "level": "INFO",

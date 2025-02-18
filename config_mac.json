@@ -1,50 +1,130 @@
 {
-    "data_path": "data",
-    "output_dir": "output",
-    "log_dir": "logs",
-    "model_dir": "models",
-    "visualization_dir": "visualizations",
-    "submission_dir": "submissions",
-    "epochs": 50,
-    "batch_size": 16,
-    "learning_rate": 0.001,
-    "weight_decay": 0.01,
-    "num_workers": 2,
-    "pin_memory": false,
-    "gradient_accumulation_steps": 4,
-    "memory_efficient": true,
-    "mixed_precision": false,
-    "hardware": {
-        "use_cuda": false,
-        "use_mps": true
+    "source_dir": "/Users/dani/Documents/AI/vision_plants",
+    "data_path": "data/",
+    "augment_threshold": 100,
+    "dropout": 0.3,
+    "image_size": {
+        "height": 224,
+        "width": 224
     },
-    "mlflow": {
-        "tracking_uri": "mlruns",
-        "experiment_name": "plant-disease-mac"
+    "data_preparation": {
+        "train_ratio": 0.8,
+        "validate_images": true,
+        "num_workers": 4,
+        "cache_size": 1000
+    },
+    "training": {
+        "batch_size": 32,
+        "num_workers": 4,
+        "epochs": 50,
+        "learning_rate": 3e-4,
+        "weight_decay": 1e-4,
+        "early_stopping_patience": 5,
+        "mixed_precision": true,
+        "save_dir": "models/",
+        "log_dir": "logs/",
+        "memory_efficient": true
     },
     "augmentation": {
         "train": {
-            "resize": [224, 224],
-            "horizontal_flip": 0.5,
-            "vertical_flip": 0.5,
-            "rotate90": 0.5,
-            "brightness_contrast": 0.3,
-            "normalize": {
+            "Resize": {
+                "height": 224,
+                "width": 224
+            },
+            "HorizontalFlip": {
+                "p": 0.5
+            },
+            "VerticalFlip": {
+                "p": 0.5
+            },
+            "RandomRotate90": {
+                "p": 0.5
+            },
+            "RandomBrightnessContrast": {
+                "brightness_limit": 0.2,
+                "contrast_limit": 0.2,
+                "p": 0.5
+            },
+            "RandomGamma": {
+                "gamma_limit": [80, 120],
+                "p": 0.5
+            },
+            "HueSaturationValue": {
+                "hue_shift_limit": 20,
+                "sat_shift_limit": 30,
+                "val_shift_limit": 20,
+                "p": 0.5
+            },
+            "Normalize": {
                 "mean": [0.485, 0.456, 0.406],
-                "std": [0.229, 0.224, 0.225]
+                "std": [0.229, 0.224, 0.225],
+                "max_pixel_value": 255.0
             }
         },
-        "val": {
-            "resize": [224, 224],
-            "normalize": {
+        "test": {
+            "Resize": {
+                "height": 224,
+                "width": 224
+            },
+            "Normalize": {
                 "mean": [0.485, 0.456, 0.406],
-                "std": [0.229, 0.224, 0.225]
+                "std": [0.229, 0.224, 0.225],
+                "max_pixel_value": 255.0
             }
         }
     },
+    "model_path": "models/best_model.pth",
+    "test_dir": "test_images/",
+    "output_dir": "submissions/",
     "manager_info": {
-        "first_name": "User",
-        "last_name": "Name",
-        "phone": "1234567890"
+        "first_name": "Danial",
+        "last_name": "Jabbari",
+        "email": "danijabbari@protonmail.com"
+    },
+    "submissions": [
+        {
+            "number": 1,
+            "strategy": "base",
+            "description": "Base model with standard inference",
+            "batch_size": 32,
+            "tta": false
+        },
+        {
+            "number": 2,
+            "strategy": "ensemble",
+            "description": "Ensemble of top 3 checkpoints",
+            "batch_size": 16,
+            "tta": true,
+            "ensemble_weights": [0.4, 0.3, 0.3]
+        },
+        {
+            "number": 3,
+            "strategy": "tta",
+            "description": "Best single model with Test Time Augmentation",
+            "batch_size": 16,
+            "tta": true,
+            "tta_transforms": ["HorizontalFlip", "VerticalFlip", "RandomRotate90"]
+        }
+    ],
+    "time_limit": 1800,
+    "hardware": {
+        "use_cuda": false,
+        "use_mps": true,
+        "fallback_to_cpu": true,
+        "memory_efficient": true
+    },
+    "logging": {
+        "level": "INFO",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "file": "plant_classification.log"
+    },
+    "mlflow": {
+        "experiment_name": "plant_disease_classification",
+        "tracking_uri": "mlruns"
+    },
+    "visualization": {
+        "plot_training_progress": true,
+        "save_confusion_matrix": true,
+        "save_class_distribution": true
     }
 } 

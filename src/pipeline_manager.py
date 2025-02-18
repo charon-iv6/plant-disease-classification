@@ -25,6 +25,7 @@ from advanced_inference import AdvancedInference
 from model_visualizer import ModelVisualizer
 from submission_visualizer import SubmissionVisualizer
 from dataset import PlantDiseaseDataset
+from data_manager import DataManager
 
 class UnifiedPipelineManager:
     """Unified pipeline manager for training, inference, visualization, and submission"""
@@ -160,117 +161,54 @@ class UnifiedPipelineManager:
             self.logger.info("Using CPU")
         return device
     
-    def train_model(self) -> str:
-        """Train model with enhanced monitoring and safety features"""
-        self.logger.info("Starting model training")
-        
-        # Create transforms from config
-        train_transform = A.Compose([
-            A.Resize(*self.config['augmentation']['train']['resize']),
-            A.HorizontalFlip(p=self.config['augmentation']['train']['horizontal_flip']),
-            A.VerticalFlip(p=self.config['augmentation']['train']['vertical_flip']),
-            A.RandomRotate90(p=self.config['augmentation']['train']['rotate90']),
-            A.RandomBrightnessContrast(p=self.config['augmentation']['train']['brightness_contrast']),
-            A.Normalize(
-                mean=self.config['augmentation']['train']['normalize']['mean'],
-                std=self.config['augmentation']['train']['normalize']['std']
-            ),
-            ToTensorV2()
-        ])
-        
-        val_transform = A.Compose([
-            A.Resize(*self.config['augmentation']['val']['resize']),
-            A.Normalize(
-                mean=self.config['augmentation']['val']['normalize']['mean'],
-                std=self.config['augmentation']['val']['normalize']['std']
-            ),
-            ToTensorV2()
-        ])
-        
-        # Create datasets with verification
-        train_dataset = PlantDiseaseDataset(
-            root_dir=self.config['data_path'],
-            is_train=True,
-            transform=train_transform
-        )
-        val_dataset = PlantDiseaseDataset(
-            root_dir=self.config['data_path'],
-            is_train=False,
-            transform=val_transform
-        )
-        
-        # Verify datasets
-        self._verify_datasets(train_dataset, val_dataset)
-        
-        with mlflow.start_run(run_name=f"training_{datetime.now().strftime('%Y%m%d_%H%M')}") as run:
-            # Log detailed configuration
-            mlflow.log_params(self._flatten_dict(self.config))
+    def train(self):
+        """Execute training pipeline"""
+        try:
+            # Initialize data manager
+            data_manager = DataManager(self.config)
             
-            # Initialize training pipeline with enhanced config
-            pipeline = TrainingPipeline(
-                train_dataset=train_dataset,
-                val_dataset=val_dataset,
-                config=self.config
+            # Validate or prepare dataset
+            if not data_manager.validate_dataset():
+                self.logger.info("Dataset validation failed. Preparing dataset...")
+                source_dir = self.config.get('source_dir')
+                if not source_dir:
+                    raise ValueError("source_dir must be specified in config when dataset is not prepared")
+                data_manager.prepare_dataset(source_dir)
+                
+                # Validate again after preparation
+                if not data_manager.validate_dataset():
+                    raise RuntimeError("Dataset preparation failed")
+            
+            # Get dataset statistics
+            dataset_stats = data_manager.get_dataset_stats()
+            self.logger.info(f"Dataset statistics: {dataset_stats}")
+            
+            # Initialize datasets
+            train_dataset = PlantDiseaseDataset(
+                root_dir=self.config['data_path'],
+                config=self.config,
+                is_train=True
             )
             
-            try:
-                # Train with monitoring
-                best_model_path = pipeline.train()
-                
-                # Log final artifacts
-                self._log_training_artifacts(pipeline, best_model_path)
-                
-                return best_model_path
-                
-            except Exception as e:
-                self.logger.error(f"Training failed: {str(e)}")
-                self._handle_training_failure(pipeline)
-                raise
-    
-    def _verify_datasets(self, train_dataset, val_dataset):
-        """Verify dataset integrity"""
-        self.logger.info("Verifying datasets...")
-        
-        # Check class balance
-        train_labels = [sample[1] for sample in train_dataset]
-        class_counts = np.bincount(train_labels)
-        imbalance_ratio = np.max(class_counts) / np.min(class_counts)
-        
-        if imbalance_ratio > 10:
-            self.logger.warning(f"High class imbalance detected: {imbalance_ratio:.2f}x")
-        
-        # Log class distribution
-        for class_idx, count in enumerate(class_counts):
-            self.logger.info(f"Class {class_idx}: {count} samples")
-    
-    def _log_training_artifacts(self, pipeline, model_path):
-        """Log comprehensive training artifacts"""
-        # Log model
-        mlflow.pytorch.log_model(pipeline.model, "model")
-        
-        # Log metrics history
-        metrics_path = Path(self.config['log_dir']) / "metrics_history.json"
-        with open(metrics_path, 'w') as f:
-            json.dump(pipeline.metrics_history, f, indent=4)
-        mlflow.log_artifact(str(metrics_path))
-        
-        # Log visualizations
-        viz_dir = Path(self.config['visualization_dir'])
-        for viz_file in viz_dir.glob('*.png'):
-            mlflow.log_artifact(str(viz_file))
-    
-    def _handle_training_failure(self, pipeline):
-        """Handle training failures gracefully"""
-        # Save emergency checkpoint
-        emergency_path = Path(self.config['model_dir']) / "emergency_checkpoint.pth"
-        pipeline.save_checkpoint(emergency_path)
-        self.logger.info(f"Emergency checkpoint saved to {emergency_path}")
-        
-        # Log failure information
-        memory_stats = self._get_memory_stats()
-        self.logger.error("Training failed with memory stats:")
-        for key, value in memory_stats.items():
-            self.logger.error(f"- {key}: {value}")
+            val_dataset = PlantDiseaseDataset(
+                root_dir=self.config['data_path'],
+                config=self.config,
+                is_train=False
+            )
+            
+            # Initialize training pipeline
+            training_pipeline = TrainingPipeline(
+                train_dataset=train_dataset,
+                val_dataset=val_dataset,
+                config=self.config['training']
+            )
+            
+            # Start training
+            training_pipeline.train()
+            
+        except Exception as e:
+            self.logger.error(f"Training failed: {str(e)}")
+            raise
     
     def generate_submissions(self, model_path: str) -> List[str]:
         """Generate submissions with enhanced error handling and parallelization"""
@@ -493,10 +431,11 @@ class UnifiedPipelineManager:
         try:
             # Phase 1: Training
             self.logger.info("Phase 1: Training")
-            model_path = self.train_model()
+            self.train()
             
             # Phase 2: Generate Submissions
             self.logger.info("Phase 2: Submission Generation")
+            model_path = self.config['model_path']
             submission_paths = self.generate_submissions(model_path)
             
             # Phase 3: Generate Visualizations
@@ -618,7 +557,7 @@ def main():
     try:
         pipeline = UnifiedPipelineManager(args.config)
         if args.mode == 'train':
-            pipeline.train_model()
+            pipeline.train()
         elif args.mode in ['test1', 'test2']:
             pipeline.generate_submissions(pipeline.config['model_path'])
     except Exception as e:
